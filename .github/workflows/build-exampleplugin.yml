@@ -16,9 +16,11 @@ jobs:
         ref: npakin-packaging
         submodules: false
 
-    - name: Clone VST3 SDK (recursive)
+    - name: Clone VST3 SDK (recursive) next to NAP
       run: |
+        cd ..
         git clone --recursive https://github.com/steinbergmedia/vst3sdk.git
+        ls -la
 
     - name: Clone napcontrol into modules
       run: |
@@ -32,7 +34,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "Visual Studio 17 2022" -A x64 -DVST3SDK_DIR=../vst3sdk -DCMAKE_BUILD_TYPE=Release
+        cmake .. -G "Visual Studio 17 2022" -A x64 -DVST3SDK_DIR=../../vst3sdk -DCMAKE_BUILD_TYPE=Release
       continue-on-error: true
 
     - name: Build exampleplugin
@@ -50,11 +52,11 @@ jobs:
           build/CMakeFiles/*.log
         retention-days: 7
 
-    - name: Capture build output
+    - name: Capture CMake output
       if: always()
       run: |
         echo "Build completed (may have errors)"
         Get-ChildItem build -Recurse -Filter "*.log" | ForEach-Object { 
           Write-Host "=== $($_.FullName) ==="
-          Get-Content $_.FullName -Tail 100
+          Get-Content $_.FullName -Tail 100 -ErrorAction SilentlyContinue
         }
