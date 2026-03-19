@@ -20,11 +20,11 @@ jobs:
       run: |
         cd ..
         git clone --recursive https://github.com/steinbergmedia/vst3sdk.git
-        ls -la
+        Get-ChildItem
 
     - name: Clone napcontrol into modules
       run: |
-        mkdir -p modules
+        New-Item -ItemType Directory -Force -Path modules
         git clone https://github.com/stijnvanbeek/napcontrol.git modules/napcontrol
 
     - name: Setup CMake
@@ -32,7 +32,7 @@ jobs:
 
     - name: Configure CMake
       run: |
-        mkdir build
+        New-Item -ItemType Directory -Force -Path build
         cd build
         cmake .. -G "Visual Studio 17 2022" -A x64 -DVST3SDK_DIR=../../vst3sdk -DCMAKE_BUILD_TYPE=Release
       continue-on-error: true
@@ -51,12 +51,13 @@ jobs:
           build/**/*.log
           build/CMakeFiles/*.log
         retention-days: 7
+        if-no-files-found: warn
 
     - name: Capture CMake output
       if: always()
       run: |
-        echo "Build completed (may have errors)"
-        Get-ChildItem build -Recurse -Filter "*.log" | ForEach-Object { 
+        Write-Host "Build completed (may have errors)"
+        Get-ChildItem build -Recurse -Filter "*.log" -ErrorAction SilentlyContinue | ForEach-Object { 
           Write-Host "=== $($_.FullName) ==="
           Get-Content $_.FullName -Tail 100 -ErrorAction SilentlyContinue
         }
