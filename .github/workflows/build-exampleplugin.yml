@@ -1,0 +1,60 @@
+name: Build Example Plugin (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ npakin-packaging ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout NAP repository
+      uses: actions/checkout@v4
+      with:
+        ref: npakin-packaging
+        submodules: false
+
+    - name: Clone VST3 SDK (recursive)
+      run: |
+        git clone --recursive https://github.com/steinbergmedia/vst3sdk.git
+
+    - name: Clone napcontrol into modules
+      run: |
+        mkdir -p modules
+        git clone https://github.com/stijnvanbeek/napcontrol.git modules/napcontrol
+
+    - name: Setup CMake
+      uses: lukka/get-cmake@latest
+
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -G "Visual Studio 17 2022" -A x64 -DVST3SDK_DIR=../vst3sdk -DCMAKE_BUILD_TYPE=Release
+      continue-on-error: true
+
+    - name: Build exampleplugin
+      working-directory: build
+      run: cmake --build . --target exampleplugin --config Release --verbose
+      continue-on-error: true
+
+    - name: Upload build logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          build/**/*.log
+          build/CMakeFiles/*.log
+        retention-days: 7
+
+    - name: Capture build output
+      if: always()
+      run: |
+        echo "Build completed (may have errors)"
+        Get-ChildItem build -Recurse -Filter "*.log" | ForEach-Object { 
+          Write-Host "=== $($_.FullName) ==="
+          Get-Content $_.FullName -Tail 100
+        }
